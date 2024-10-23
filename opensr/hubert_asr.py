@@ -527,7 +527,7 @@ class AVHubertSeq2Seq(FairseqEncoderDecoderModel):
                 decoder_out = self.decoder(prev_output_tokens=kwargs['prev_output_tokens'], encoder_out=output)
         else:
             ft = self.freeze_finetune_updates <= self.num_updates
-            with torch.no_grad() if not ft else contextlib.ExitStack():
+            with torch.no_grad() if not ft else contextlib.ExitStack(): # 如果在finetune就注册一个ExitStack用于管理内存资源，否则不计算梯度
                 output = self.encoder(**kwargs)
             decoder_out = self.decoder(prev_output_tokens=kwargs['prev_output_tokens'], encoder_out=output)
         return decoder_out

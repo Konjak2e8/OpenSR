@@ -371,7 +371,7 @@ class Prompt_Base(nn.Module):
         return x + soft_weight @ self.emb_center
 
 class PromptLearner(nn.Module):
-    def __init__(self, encoder_embed_dim, strategy, training):
+    def __init__(self, encoder_embed_dim, strategy, training): # 初始化一些可学习的参数
         super().__init__()
 
         self.encoder_embed_dim = encoder_embed_dim
@@ -397,7 +397,7 @@ class PromptLearner(nn.Module):
             self.prompt_embeddings = None
 
     def forward(self, visual_features, audio_features):
-
+        # 把两个features冻结起来，不参与训练过程中的梯度传播
         visual_features = visual_features.detach()
         audio_features = audio_features.detach()
         return visual_features, audio_features
@@ -512,8 +512,8 @@ class AVHubertModel(BaseFairseqModel):
         model = AVHubertModel(cfg, task.cfg, task.dictionaries, **kwargs)
         return model
 
-    def apply_input_mask(self, x, padding_mask, target_list):
-        B, C, T = x.shape[:3]
+    def apply_input_mask(self, x, padding_mask, target_list): # 随机掩码一部分token
+        B, C, T = x.shape[:3] # batch_size, channels, timesteps
         is_audio = True if len(x.shape) == 3 else False
         if is_audio:
             mask_prob, mask_length = self.mask_prob_audio, self.mask_length_audio
@@ -539,11 +539,11 @@ class AVHubertModel(BaseFairseqModel):
                 x[mask_indices] = 0
             elif is_audio:
                 x[mask_indices] = self.mask_emb
-            elif self.selection_type == 'same_other_seq':
+            elif self.selection_type == 'same_other_seq': # 从其他序列中随机选择数据来替代被掩码的位置
                 perm = (torch.arange(B) + torch.randint(low=1, high=B, size=(1,))) % B
                 x_perm = x[perm]
                 x[mask_indices] = x_perm[mask_indices]
-            elif self.selection_type == 'same_seq':
+            elif self.selection_type == 'same_seq': # 从同一序列中选择不重叠的位置来替代被掩码的位置
                 batch_indexes_, other_indexes = [], []
                 for batch_index, start, end in zip(batch_indexes, starts, ends):
                     length = end - start
@@ -799,7 +799,7 @@ class AVHubertModel(BaseFairseqModel):
         elif src_audio is not None and src_video is not None:
             features_video = self.forward_features(src_video, modality='video')
             features_audio = self.forward_features(src_audio, modality='audio')  # features: [B, F, T]
-
+        # 特征融合
         if self.modality_fuse == 'concat':
             features = torch.cat([features_audio, features_video], dim=1)
         elif self.modality_fuse == 'add':
@@ -810,14 +810,14 @@ class AVHubertModel(BaseFairseqModel):
         features = self.layer_norm(features)
 
         if padding_mask is not None:
-            padding_mask = self.forward_padding_mask(features, padding_mask)
+            padding_mask = self.forward_padding_mask(features, padding_mask) # 更新掩码
 
         if self.post_extract_proj is not None:
             features = self.post_extract_proj(features)
 
         features = self.dropout_input(features)
         if self.masking_type == 'feature' and mask:
-            x, mask_indices = self.apply_feature_mask(features, padding_mask, target_list)
+            x, mask_indices = self.apply_feature_mask(features, padding_mask, target_list) # 和finetune的唯一区别：给特征做掩码
         else:
             x = features
 
@@ -832,7 +832,7 @@ class AVHubertModel(BaseFairseqModel):
             layer=None if output_layer is None else output_layer - 1
         )
 
-        feature = features if ret_conv else x
+        feature = features if ret_conv else x # 输出处理后特征或原始特征
         return feature, padding_mask
 
 

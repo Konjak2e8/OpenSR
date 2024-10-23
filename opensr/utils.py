@@ -145,7 +145,7 @@ def compute_mask_indices(
     mask_prob: float,
     mask_length: int,
     mask_type: str = "static",
-    mask_other: float = 0.0,
+    mask_other: float = 0.0, # 第二个分布参数，用于uniform等复杂分布
     min_masks: int = 0,
     no_overlap: bool = False,
     min_space: int = 0,
